@@ -1,20 +1,13 @@
 package com.ecomarket.ms_usuarios.controller;
 
-import java.util.List;
-import java.util.UUID;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.ecomarket.ms_usuarios.model.Usuario;
 import com.ecomarket.ms_usuarios.service.UsuarioService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -39,29 +32,33 @@ public class UsuarioController {
     }
 
     @PostMapping
-    public ResponseEntity<Usuario> crearUsuario(@RequestBody Usuario usuario) {
+    public ResponseEntity<Usuario> crearUsuario(@Valid @RequestBody Usuario usuario) {
         return ResponseEntity.ok(service.guardarUsuario(usuario));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Usuario> actualizarUsuario(@PathVariable UUID id, @RequestBody Usuario usuario) {
+    public ResponseEntity<Usuario> actualizarUsuario(
+            @PathVariable UUID id,
+            @Valid @RequestBody Usuario usuario
+    ) {
         return service.obtenerUsuarioPorId(id)
-            .map(usuarioExistente -> {
-                usuarioExistente.setNombre(usuario.getNombre());
-                usuarioExistente.setEmail(usuario.getEmail());
-                usuarioExistente.setContraseña(usuario.getContraseña());
-                usuarioExistente.setDireccion(usuario.getDireccion());
-                usuarioExistente.setTelefono(usuario.getTelefono());
-                usuarioExistente.setRol(usuario.getRol());
-
-                Usuario actualizado = service.guardarUsuario(usuarioExistente);
-                return ResponseEntity.ok(actualizado);
-            })
-            .orElse(ResponseEntity.notFound().build());
+                .map(usuarioExistente -> {
+                    usuarioExistente.setNombre(usuario.getNombre());
+                    usuarioExistente.setEmail(usuario.getEmail());
+                    usuarioExistente.setContraseña(usuario.getContraseña()); // <- CAMBIO AQUÍ
+                    usuarioExistente.setDireccion(usuario.getDireccion());
+                    usuarioExistente.setTelefono(usuario.getTelefono());
+                    usuarioExistente.setRol(usuario.getRol());
+                    return ResponseEntity.ok(service.guardarUsuario(usuarioExistente));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarUsuario(@PathVariable UUID id) {
+        if (!service.obtenerUsuarioPorId(id).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
         service.eliminarUsuario(id);
         return ResponseEntity.noContent().build();
     }
