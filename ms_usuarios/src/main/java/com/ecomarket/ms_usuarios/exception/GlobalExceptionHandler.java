@@ -36,10 +36,14 @@ public class GlobalExceptionHandler {
     // Violación de integridad desde la base de datos
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        // SOLUCIÓN: Almacenar el rootCause en una variable temporal para evitar múltiples llamadas y potencial NPE
+        Throwable rootCause = ex.getRootCause();
+        String errorMessage = (rootCause != null) ? rootCause.getMessage() : ex.getMessage();
+
         return ResponseEntity.badRequest().body(new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "Violación de integridad de datos",
-                ex.getRootCause() != null ? ex.getRootCause().getMessage() : ex.getMessage()
+                errorMessage
         ));
     }
 
