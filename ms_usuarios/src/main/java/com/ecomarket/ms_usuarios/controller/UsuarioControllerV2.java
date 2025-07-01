@@ -4,6 +4,7 @@ import com.ecomarket.ms_usuarios.assemblers.UsuarioModelAssembler;
 import com.ecomarket.ms_usuarios.dto.UsuarioModel;
 import com.ecomarket.ms_usuarios.model.Usuario;
 import com.ecomarket.ms_usuarios.service.UsuarioService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +16,7 @@ import java.util.UUID;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @RestController
-@RequestMapping("/api/v2/usuarios") // 👈 NUEVA VERSIÓN
+@RequestMapping("/api/v2/usuarios")
 public class UsuarioControllerV2 {
 
     private final UsuarioService service;
@@ -26,13 +27,16 @@ public class UsuarioControllerV2 {
         this.assembler = assembler;
     }
 
+    @Operation(summary = "Obtiene todos los usuarios")
     @GetMapping
     public ResponseEntity<CollectionModel<UsuarioModel>> obtenerTodos() {
         List<Usuario> usuarios = service.listarUsuarios();
         List<UsuarioModel> modelos = usuarios.stream().map(assembler::toModel).toList();
-        return ResponseEntity.ok(CollectionModel.of(modelos, linkTo(methodOn(UsuarioControllerV2.class).obtenerTodos()).withSelfRel()));
+        return ResponseEntity.ok(CollectionModel.of(modelos,
+                linkTo(methodOn(UsuarioControllerV2.class).obtenerTodos()).withSelfRel()));
     }
 
+    @Operation(summary = "Obtiene un usuario por ID")
     @GetMapping("/{id}")
     public ResponseEntity<UsuarioModel> obtenerPorId(@PathVariable UUID id) {
         return service.obtenerUsuarioPorId(id)
@@ -40,12 +44,14 @@ public class UsuarioControllerV2 {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @Operation(summary = "Crea un nuevo usuario")
     @PostMapping
     public ResponseEntity<UsuarioModel> crearUsuario(@Valid @RequestBody Usuario usuario) {
         Usuario nuevo = service.guardarUsuario(usuario);
         return ResponseEntity.ok(assembler.toModel(nuevo));
     }
 
+    @Operation(summary = "Actualiza un usuario existente")
     @PutMapping("/{id}")
     public ResponseEntity<UsuarioModel> actualizarUsuario(@PathVariable UUID id,
                                                           @Valid @RequestBody Usuario usuario) {
@@ -63,15 +69,14 @@ public class UsuarioControllerV2 {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @Operation(summary = "Elimina un usuario por ID")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarUsuario(@PathVariable UUID id) {
-        return service.obtenerUsuarioPorId(id)
-        .map(usuario -> {
-            service.eliminarUsuario(id);
-            return usuario;
-        })
-        .map(u -> ResponseEntity.noContent().<Void>build())
-        .orElse(ResponseEntity.notFound().build());
-
+    if (service.obtenerUsuarioPorId(id).isPresent()) {
+        service.eliminarUsuario(id);
+        return ResponseEntity.noContent().build();
+    } else {
+        return ResponseEntity.notFound().build();
     }
+}
 }
